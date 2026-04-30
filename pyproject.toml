@@ -1,0 +1,72 @@
+[project]
+name = "mysql_distillery"
+version = "0.1.0"
+description = "Distill a MySQL server into per-component snapshot artifacts (Parquet + SQL) so the databases can be faithfully reconstructed elsewhere."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    {name = "LahaLuhem", email = "ahalmehul+github@gmail.com"},
+]
+requires-python = ">=3.11"
+keywords = [
+    "mysql",
+    "distillery",
+    "snapshot",
+    "duckdb",
+    "parquet",
+    "anonymization-prep",
+]
+# PEP 639 derives the License classifier from `license = "Apache-2.0"` above,
+# so we deliberately omit `License :: OSI Approved :: Apache Software License`
+# here — hatchling 1.27+ rejects the combination.
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "duckdb>=1.1.0",
+    "pymysql>=1.1.0",
+    # PyMySQL needs `cryptography` for the cold-cache handshake with MySQL 8+'s
+    # default `caching_sha2_password` auth plugin (RSA key exchange). Without
+    # it, the first connection to a freshly-started MySQL 8 server fails with
+    # "'cryptography' package is required for sha256_password or
+    # caching_sha2_auth methods".
+    "cryptography>=42.0.0",
+    "pyyaml>=6.0.1",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "python-dotenv>=1.0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/LahaLuhem/mysql_distillery"
+Repository = "https://github.com/LahaLuhem/mysql_distillery"
+Issues = "https://github.com/LahaLuhem/mysql_distillery/issues"
+
+[project.scripts]
+mysql_distillery = "mysql_distillery.extract:cli"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.15.10",
+]
+
+# hatchling >= 1.27 is needed for PEP 639 SPDX `license = "..."` support.
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mysql_distillery"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
