@@ -346,6 +346,46 @@ Tests are fully offline — they only exercise the regex helpers and
 `ServerConnectionConfig`, no MySQL instance needed. When adding a new DDL
 quirk, extend `tests/test_schema_foreign_key_strip.py` or `tests/test_ddl_definer_strip.py`.
 
+`tests/smoke_test.py` is intentionally **not** picked up by pytest (the
+`python_files = ["test_*.py"]` rule excludes the `*_test.py` shape). It's a
+plain script invoked by the publish workflow against an installed wheel/sdist
+to verify the package layout and CLI entry point survived packaging.
+
+---
+
+## Releasing
+
+Versioned releases are cut by `scripts/release.sh`. The script bumps the
+version in `pyproject.toml`, tags `vX.Y.Z`, and pushes — the GitHub Action at
+`.github/workflows/publish.yml` then publishes to PyPI via OIDC trusted
+publishing (no API token on your machine).
+
+```bash
+scripts/release.sh patch          # interactive — confirms before pushing
+scripts/release.sh patch --yes    # non-interactive (CI-style)
+scripts/release.sh --dry-run      # print plan, no side effects
+```
+
+For a TestPyPI dry-run from your machine (skips commit / tag / push, just
+bumps + builds + uploads):
+
+```bash
+export UV_PUBLISH_TOKEN="<testpypi token>"
+scripts/release.sh patch --testpypi
+```
+
+One-time setup for OIDC trusted publishing:
+
+1. **PyPI** → project settings → *Publishing* → add a GitHub trusted publisher
+   (`owner=LahaLuhem`, `repo=mysql_distillery`, `workflow=publish.yml`,
+   `environment=pypi`).
+2. **GitHub** → repo settings → *Environments* → create an environment named
+   `pypi` (deployment-protection rules are optional but recommended).
+
+The Action smoke-tests both wheel and sdist (`tests/smoke_test.py`) before
+calling `uv publish`, so a malformed package layout fails the run rather
+than landing on PyPI.
+
 ---
 
 ## Security notes

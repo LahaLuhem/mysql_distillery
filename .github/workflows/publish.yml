@@ -1,0 +1,55 @@
+# Publish to PyPI on every `vX.Y.Z` tag push.
+#
+# Uses OIDC trusted publishing (no API token in repo secrets). Setup:
+#   1. PyPI → project settings → "Publishing" → add GitHub trusted publisher
+#      (owner=LahaLuhem, repo=mysql_distillery, workflow=publish.yml,
+#      environment=pypi).
+#   2. GitHub → repo settings → Environments → create "pypi" (optionally
+#      add deployment protection rules).
+#
+# Reference: https://docs.astral.sh/uv/guides/integration/github/#publishing-to-pypi
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    name: Build and publish to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mysql_distillery
+    permissions:
+      # Mandatory for OIDC trusted publishing.
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # v8.1.0 — pinned to commit SHA for supply-chain safety. Bump as needed.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+
+      - name: Install Python
+        run: uv python install 3.13
+
+      # `--no-sources` mirrors how downstream consumers will build (no
+      # tool.uv.sources shortcuts), per uv's publish guide.
+      - name: Build distributions
+        run: uv build --no-sources
+
+      # Smoke-test both wheel and sdist in isolated envs — catches missing
+      # files in the wheel layout, broken imports, or a broken console-script
+      # entry point before we ever hit the PyPI upload.
+      - name: Smoke-test wheel
+        run: uv run --isolated --no-project --with dist/*.whl tests/smoke_test.py
+
+      - name: Smoke-test sdist
+        run: uv run --isolated --no-project --with dist/*.tar.gz tests/smoke_test.py
+
+      - name: Publish to PyPI
+        run: uv publish
